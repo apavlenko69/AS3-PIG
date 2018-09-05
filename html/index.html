@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>S3PhotoIndex Gallery Ribbon</title>
+
+<meta charset="utf-8">
+<meta meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/3/w3.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+  /* Always set the map height explicitly to define the size of the div
+   * element that contains the map. */
+  #map {
+    height: 100%;
+  }
+</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-touch.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-sanitize/1.5.8/angular-sanitize.min.js"></script>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>  -->
+<script src="js/s3pi_grid.js"></script>
+
+</head>
+
+<body ng-app="s3PIGrid" style="position:relative;min-height:100%;">
+
+<div ng-controller="S3PIGalleryConfig">
+
+  <div class="w3-top w3-blue-grey w3-small w3-border-bottom w3-border-black">
+    <!-- Header for big screens -->
+    <div class="w3-row w3-white w3-padding w3-hide-medium w3-hide-small" style="margin-top:3px;">
+     <div class="w3-half" style="margin:4px 0 6px 0">
+       <a href='/'><b><span class="w3-large">S3PhotoIndex</span></b></a>
+     </div>
+     <div class="w3-half w3-margin-top w3-wide w3-hide-medium w3-hide-small">
+      <div class="w3-right" style="position:relative;top:5px;">INTELLIGENT PHOTO GALLERY</div>
+     </div>
+    </div>
+
+    <!-- Header for medium screens -->
+    <div class="w3-hide-large w3-hide-small w3-white w3-padding-4" style="margin-top:3px;">
+     <div class="w3-center"><a href='/'><b><span class="w3-large">S3PhotoIndex</span></b></a></div>
+     <div class="w3-center w3-wide w3-hide-small" style="margin:5px 0 -4px 0">INTELLIGENT PHOTO GALLERY</div>
+    </div>
+
+    <ul class="w3-navbar">
+      <li class="w3-opennav">
+        <a href="#" ng-click="showoptions = !showoptions" ng-init="showoptions=false">
+          <i class="fa fa-navicon"></i>
+        </a>
+      </li>
+      <li class="w3-opennav w3-right"><a href="#" ng-show="showoptions" ng-click="showoptions=false">
+        <i class="fa fa-close"></i></a></li>
+      <li class="w3-opennav w3-left" style="margin-left:3px;">
+          <input style="margin-top: 6px" type="search" size="21" placeholder="Find photo..."
+            ng-init="spattern=''" ng-model="spattern.$" ng-change="startFrom = 0">
+            <div class="w3-tooltip w3-tag w3-round-large w3-amber">{{sresult.length}}
+              <span class="w3-text w3-animate-opacity"><em class="w3-tiny">photo(s) found in gallery</em></span>
+            </div>
+      </li>
+    </ul>
+    <div class="" style="padding:0 0 3px 48px">
+          <div ng-show="showoptions" class="w3-animate-opacity">
+
+          <div class="w3-border" style="padding:2px; margin:2px 2px 2px 0; width:99%">
+            <span class="w3-tag w3-round w3-blue-grey w3-border w3-white-border">
+              Filters
+            </span>
+            <br>
+          <input style="margin-top: 3px" type="search" size="21" placeholder="Search in labels..."
+            ng-init="spattern=''" ng-model="spattern.RkLabels.Name">
+            <br>
+          <input style="margin-top: 3px" type="text" size="21"
+            ng-init="spattern=''" ng-model="spattern.EXIF_Tags.$"
+            placeholder="Date of shooting...">
+          </div>
+
+          <div class="w3-border" style="padding:2px; margin:2px 2px 2px 0; width:99%">
+            <span class="w3-large">
+              <a href="#" ng-click="gstepchange(0)"><i class="fa fa-minus-square-o"></i></a>
+            </span>
+            <input style="margin-top: 3px; margin-bottom: 3px" type="range" min="1" max="{{gstepMax}}"
+             ng-model="gstep">
+             <span class="w3-large">
+               <a href="#" ng-click="gstepchange(1)"><i class="fa fa-plus-square-o"></i></a>
+             </span>
+             <br>
+             <input style="margin-top: 3px; margin-bottom: 3px" size="2" value="{{gstep}}" readonly>
+              <span class="w3-tag w3-round w3-blue-grey w3-border w3-white-border">photo(s) per page</span>
+          </div>
+
+          <!-- Sort order toggle v2 -->
+          <div class="w3-container w3-border" style="padding:2px; margin:2px 2px 2px 0; width:99%">
+          <div class="w3-row">
+            <span class="w3-tag w3-round w3-blue-grey w3-border w3-white-border">
+              Sort Order
+            </span><br>
+            <div class="w3-half">
+              <input type="radio" name="op" ng-model="op" value="0" ng-checked="true">
+              <label><a href="" ng-click="rvrs = !rvrs; op = 0">Upload date</a></label>
+              <i ng-show="!rvrs" class="fa fa-sort-amount-desc"></i>
+              <i ng-show="rvrs" class="fa fa-sort-amount-asc"></i>
+            </div>
+            <div class="w3-half">
+              <input type="radio" name="op" ng-model="op" value="2">
+              <label><a href="" ng-click="rvrs = !rvrs; op = 2">Shooting date</a></label>
+              <i ng-show="!rvrs" class="fa fa-sort-amount-desc"></i>
+              <i ng-show="rvrs" class="fa fa-sort-amount-asc"></i>
+            </div>
+          </div>
+          </div>
+
+        </div>
+      </div>
+
+  </div>
+
+<p class="w3-hide-small"><br><p><br>
+
+<!-- <div ng-controller="S3PIGalleryConfig" style="padding-top:1%"> -->
+<div style="padding-top:1%">
+  <ul class="w3-ul w3-hoverable">
+    <li ng-repeat="image in (sresult = (imagesData | filter:spattern | orderBy:ordBy(op):rvrs) |limitTo:gstep:startFrom)">
+      <span class="w3-tag w3-round w3-blue-grey w3-tiny" style="margin:0 4px 8px 0" ng-click="showfn=!showfn" ng-init="showfn=false">
+        {{startFrom + $index + 1 }}</span>
+        <span class="w3-small"><b>{{getImgFolder(image)}} </b></span>
+        <span class="w3-small" ng-show="showfn">
+          <b> <i class="fa fa-arrow-right"></i> File:</b> {{image.FileName}}</span>
+          <br>
+      <img class="w3-image w3-card-4" title="{{image.EXIF_Tags.ShootingDateTime | date}}" alt="{{image.RkLabels[0].Name}}"
+        ng-src="{{myBucketURL + image.FileName}}">
+      <br>
+
+      <!-- Buttons group to show/hide labels and tags-->
+      <div class="w3-bar w3-margin-top w3-tiny">
+        <button ng-init="showlabels=false" ng-click="showlabels = !showlabels" ng-hide="image.RkLabels.length == 0"
+              class="w3-button w3-white w3-border w3-border-indigo w3-round-large w3-padding-4">
+              <i class="fa fa-tasks"></i> Labels  <span class="w3-tag w3-round w3-indigo w3-margin-left">
+                {{image.RkLabels.length}}</span>
+        </button>
+        <button ng-init="showexifs=false" ng-click="showexifs = !showexifs" ng-hide="exif_len(image.EXIF_Tags) == 0"
+              class="w3-button w3-white w3-border w3-border-teal w3-round-large w3-padding-4">
+              <i class="fa fa-camera"></i> EXIF tags  <span class="w3-tag w3-round w3-teal w3-margin-left">
+                {{exif_len(image.EXIF_Tags)}}</span>
+        </button>
+        <button ng-init="showexifs=false" ng-click="showmap = !showmap" ng-hide="!hasgps(image.EXIF_Tags)"
+              class="w3-button w3-white w3-border w3-border-cyan w3-round-large w3-padding-4">
+              <i class="fa fa-map-pin"></i> On MAP
+        </button>
+      </div>
+
+      <!-- List of labels for specific photo -->
+      <div ng-show="showlabels" class="w3-animate-opacity w3-small">
+      <ol class="w3-border w3-border-indigo w3-round-large">
+        <u>Discoved by AWS Rekognition ({{image.RkLabels.length}}) labels</u>
+        <li ng-repeat="label in image.RkLabels">
+          <div class="w3-light-grey">
+            <div class="w3-grey w3-padding-left"
+                 style="{{'width:' + label.Confidence + '%'}}">
+                 <b>{{label.Name}}</b>, {{label.Confidence}}%
+            </div>
+          </div>
+        </li>
+      </ol>
+      </div>
+
+      <!-- List of Exif tags for specific photo -->
+      <div ng-show="showexifs" class="w3-animate-opacity w3-small">
+      <ol class="w3-border w3-border-teal w3-round-large">
+        <u>EXIF tags ({{exif_len(image.EXIF_Tags)}})</u>
+        <li ng-repeat="(tagKey, tagValue) in image.EXIF_Tags">{{tagKey}} : <b>{{tagValue}}</b></li>
+      </ol>
+      </div>
+
+    <!-- Shows Google map with marker in place of shot-->
+    <div ng-show="showmap" class="w3-animate-opacity w3-small">
+    <div class="w3-border w3-border-cyan" id="map">
+    <!-- Static Google maps as fixed image.
+     <img class="w3-image" alt="Location on Google map"
+     src="https://maps.googleapis.com/maps/api/staticmap?size=600x400&markers=color:yellow|{{eGPStoDD(image.EXIF_Tags)[0]}},{{eGPStoDD(image.EXIF_Tags)[1]}}&zoom=15&region=UA&key=AIzaSyDCBDh5PrbSC9G-m4G3NpQYjymApurLkCc">
+    -->
+   <!-- Embeded Google maps. Interactive -->
+    <iframe frameborder="0" style="border:0" width="100%" height="350"
+    ng-src="{{trustSrc(image.EXIF_Tags)}}">
+    </iframe>
+
+    </div>
+    </div>
+
+    </li>
+  </ul>
+
+</div>
+
+<p><br>
+
+<!-- Bottom navigation bar with buttons-->
+<div class="w3-bottom w3-center w3-blue-grey w3-marging-0 w3-border-top w3-border-black" style="padding: 2px 8px 5px 8px">
+
+  <button class="w3-button w3-white w3-border w3-border-black w3-round-large w3-tiny w3-padding-4
+  w3-margin-right-4 w3-margin-left-4" ng-click="startFrom = 0" ng-disabled="1*startFrom == 0">
+  <i class="fa fa-step-backward"></i>
+  </button>
+
+   <button class="w3-button w3-white w3-border w3-border-black w3-round-large w3-tiny w3-padding-4"
+   ng-click="startFrom = 1*startFrom - 1*gstep" ng-disabled="(1*startFrom - 1*gstep) < 0">
+   <i class="fa fa-backward"></i> Prev ({{gstep}})
+   </button>
+
+   <button class="w3-button w3-white w3-border w3-border-black w3-round-large w3-tiny w3-padding-4"
+   ng-click="startFrom = 1*startFrom + 1*gstep" ng-disabled="((1*startFrom + 1*gstep + 1) > sresult.length)">
+    Next ({{gstep}}) <i class="fa fa-forward"></i>
+   </button>
+
+   <button class="w3-button w3-white w3-border w3-border-black w3-round-large w3-tiny w3-padding-4
+   w3-margin-right-4 w3-margin-left-4" ng-click="startFrom = (sresult.length - gstep)" ng-disabled="1*startFrom >= (sresult.length - gstep)">
+   <i class="fa fa-step-forward"></i>
+   </button>
+
+</div>
+
+</div>
+
+
+</body>
+</html>
