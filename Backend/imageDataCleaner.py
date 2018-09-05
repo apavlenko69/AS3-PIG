@@ -6,10 +6,10 @@ import urllib
 import json, simplejson
 
 
-# ************************************************************
-#   Deletes DynamoDB item after deleting image file in bucket
-#
-# ************************************************************
+# *************************************************************
+#   Deletes DynamoDB item after deleting image file from bucket
+#  
+# *************************************************************
 
 v_region_name = 'eu-west-1'
 v_ddb_table_1_name = 'T1_RkLabels'
