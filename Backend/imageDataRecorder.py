@@ -24,7 +24,7 @@ myTable_2_Params = ['T2_ExifTags','S3ObjKey','ShootingDateTime']
 #myTable_3_Params = ['T3_Genres','S3ObjKey','Genre'] # reserved for genres information
 myTable_4_Params = ['T4_AllImgAttributes','FileName','UploadTimeStamp']
 
-rk_limit = 15*1024*1024 # AWS Rekognition limit on S3 file size
+rk_limit = 15*1024*1024 # AWS Rekognition limitation for S3 file size
 
 # Allowed mime types
 imageMimeTypes = [
