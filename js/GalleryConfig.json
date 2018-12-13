@@ -1,0 +1,82 @@
+[
+    {
+        "EXIF_Tags": {
+            "ExifImageWidth": "1280",
+            "Image_Make": "NIKON CORPORATION",
+            "Image_Model": "NIKON D7000",
+            "ISOSpeedRatings": "320",
+            "ExposureProgram": "Unidentified",
+            "ExposureTime": "1/250",
+            "Image_Orientation": "Horizontal (normal)",
+            "ExifImageLength": "848",
+            "FNumber": "10",
+            "ShootingDateTime": "2015-10-18T16:48:28"
+        },
+        "FileName": "v2/img/Demo album/DSC_3247.jpg",
+        "RkLabels": [],
+        "UploadTimeStamp": "2017-10-08T18:29:07"
+    },
+    {
+        "EXIF_Tags": {
+            "GPSLatitude": "[50, 39, 1493/25]",
+            "GPSAltitude": "177",
+            "Image_Model": "iPhone 6s",
+            "ISOSpeedRatings": "32",
+            "ExposureProgram": "Program Normal",
+            "GPSLongitudeRef": "E",
+            "LensModel": "iPhone 6s back camera 4.15mm f/2.2",
+            "Image_Orientation": "Horizontal (normal)",
+            "GPSLongitude": "[32, 46, 1339/100]",
+            "ExifImageWidth": "1280",
+            "Image_Make": "Apple",
+            "GPSLatitudeRef": "N",
+            "ExposureTime": "1/50",
+            "ExifImageLength": "1280",
+            "FNumber": "11/5",
+            "ShootingDateTime": "2017-09-14T12:28:15"
+        },
+        "FileName": "v2/img/Demo album/IMG_1280.jpg",
+        "RkLabels": [],
+        "UploadTimeStamp": "2017-10-08T18:29:10"
+    },
+    {
+        "EXIF_Tags": {
+            "GPSLatitude": "[50, 31, 181/20]",
+            "GPSAltitude": "122",
+            "Image_Model": "iPhone 6s",
+            "ISOSpeedRatings": "32",
+            "ExposureProgram": "Program Normal",
+            "GPSLongitudeRef": "E",
+            "LensModel": "iPhone 6s back camera 4.15mm f/2.2",
+            "Image_Orientation": "Horizontal (normal)",
+            "GPSLongitude": "[30, 12, 189/20]",
+            "ExifImageWidth": "960",
+            "Image_Make": "Apple",
+            "GPSLatitudeRef": "N",
+            "ExposureTime": "1/33",
+            "ExifImageLength": "1280",
+            "FNumber": "11/5",
+            "ShootingDateTime": "2017-09-17T12:31:06"
+        },
+        "FileName": "v2/img/Demo album/IMG_1282.jpg",
+        "RkLabels": [],
+        "UploadTimeStamp": "2017-10-08T18:29:11"
+    },
+    {
+        "EXIF_Tags": {
+            "ExifImageWidth": "1280",
+            "Image_Make": "NIKON CORPORATION",
+            "Image_Model": "NIKON D7000",
+            "ISOSpeedRatings": "400",
+            "ExposureProgram": "Unidentified",
+            "ExposureTime": "1/80",
+            "Image_Orientation": "Horizontal (normal)",
+            "ExifImageLength": "848",
+            "FNumber": "9/2",
+            "ShootingDateTime": "2016-10-01T18:43:18"
+        },
+        "FileName": "v2/img/Demo album/DSC_3338.jpg",
+        "RkLabels": [],
+        "UploadTimeStamp": "2017-10-08T18:29:08"
+    }
+]
