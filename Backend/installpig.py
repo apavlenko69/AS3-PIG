@@ -107,10 +107,10 @@ def create_json_config():
 
 def insert_images_data():
     """
-    Listing images in the bucket and for each photo:
+    Paginates images in the bucket and for each photo does next:
     - discovers labels and saves to DynamoDB T1
     - extracts Exif tags and saves to DynamoDB T2
-    - stores consolidated data in T4 and creates JSON config from it
+    - stores consolidated data in T3 and creates JSON config from it
 
     :arg
 
@@ -118,7 +118,7 @@ def insert_images_data():
 
     """
 
-    print(__name__, 'Images processing with paginator is in progress...')
+    print(__name__, 'does images processing with paginator')
 
 
 if __name__ == '__main__':
