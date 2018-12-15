@@ -19,7 +19,7 @@ AS3-PIG service components and required settings are:
 # import boto3
 
 MY_REGION = 'eu-west-1'
-MY_BUCKET = 's3-pig'
+MY_BUCKET = 'as3-pig'
 
 # Accepted image mime types
 IMAGE_MIME_TYPES = [
