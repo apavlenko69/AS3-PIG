@@ -10,7 +10,7 @@ var s3pigrid = angular.module('s3PIGrid',['ngSanitize']);
 
 // Gallery logic: fetching data from JSON
 s3pigrid.controller('S3PIGalleryConfig', function($scope, $rootScope, $http, $sce) {
-    $http.get('https://s3-eu-west-1.amazonaws.com/mpip/v2/js/GalleryConfig.json')
+    $http.get('https://s3-eu-west-1.amazonaws.com/s3-pig/js/pigconfig.json')
       .then(function onSuccess(response) {
         $scope.imagesData = response.data; // Object with whole gallery data
         $scope.totalp = response.data.length;  // Total number of photos in album
@@ -94,7 +94,7 @@ s3pigrid.controller('S3PIGalleryConfig', function($scope, $rootScope, $http, $sc
       $scope.startFrom = 0; //Default value - start from first page
 
       //Sort order logic
-      $scope.ordByList = ['-UploadTimeStamp','UploadTimeStamp','-EXIF_Tags.ShootingDateTime','EXIF_Tags.ShootingDateTime'];
+      $scope.ordByList = ['-UploadTime','UploadTime','-EXIF_Tags.ShootingTime','EXIF_Tags.ShootingTime'];
       $scope.rvrs = false;
       $scope.ordBy = function(or_param){
         if (or_param) {
