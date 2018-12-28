@@ -1,10 +1,11 @@
-"""AS3 Photo Index Gallery """
+"""AS3 Photo Index Gallery_ """
 
 import boto3
 import exifread as exif
 import time
 
 MY_REGION = 'eu-west-1'
+REKOGNITION_IMG_SIZE_LIMIT = 15*1024*11024  # Check AWS limitations
 
 lambda_client = boto3.client('lambda')
 
@@ -21,9 +22,9 @@ def detect_rk_labels(image, s3bucket):
 
     returns: dictionary of detected labels with probability numbers
     """
-    try:
 
-        rk_client = boto3.client('Rekognition', region=MY_REGION)  # region
+    try:
+        rk_client = boto3.client('Rekognition', region=MY_REGION)
 
         labels = []
 
