@@ -1,8 +1,7 @@
-"""AS3 Photo Index Gallery_ """
+"""AS3 Photo Index Gallery """
 
 import boto3
 import exifread as exif
-import time
 
 MY_REGION = 'eu-west-1'
 REKOGNITION_IMG_SIZE_LIMIT = 15*1024*11024  # Check AWS limitations
@@ -24,7 +23,7 @@ def detect_rk_labels(image, s3bucket):
     """
 
     try:
-        rk_client = boto3.client('Rekognition', region=MY_REGION)
+        rk_client = boto3.client('rekognition', region_name=MY_REGION)
 
         labels = []
 
@@ -56,10 +55,10 @@ def fetch_exif_tags(image, s3bucket):
     :param image: S3 object key for uploaded image file
     :param s3bucket: S3 bucket with image
 
-    :return: dictionary of EXIF tags
+    :return: dictionary of selected EXIF tags
     """
 
-    s3client = boto3.client('s3', region=MY_REGION)
+    s3client = boto3.client('s3', region_name=MY_REGION)
 
     useful_exif_tags = [  # List of useful EXIF tags
         'Image Make',
@@ -84,18 +83,19 @@ def fetch_exif_tags(image, s3bucket):
 
     try:
         with open('/tmp/tmpimage.jpg', 'wb') as data:
-            s3client.download_fileobj(s3bucket, image.decode('utf8'), data)
+            s3client.download_fileobj(s3bucket, image, data)
 
         tf = open('/tmp/tmpimage.jpg', 'rb')
         exif_tags = exif.process_file(tf, details=False)
 
-        exifs_dict = dict
+        exifs_dict = {}
 
         for tag in exif_tags.keys():
-            if tag in (useful_exif_tags): # Filtering whole EXIF array to select only list of useful
+            if tag in (useful_exif_tags):  # Filtering whole EXIF array to select only list of useful
                 if tag == 'Image DateTime':
+                    pass
                     # Creating datetime in ISO format
-                    dt = time.strptime(exif_tags[tag].printable, "%Y:%m:%d %H:%M:%S")
+                    # dt = time.strptime(exif_tags[tag].printable, "%Y-%m-%dT%H:%M:%S")
                 elif tag.startswith('EXIF'):
                     exif_tag_str = tag.lstrip('EXIF')
                     exifs_dict.update({exif_tag_str.lstrip(): exif_tags[tag].printable})
@@ -112,14 +112,22 @@ def fetch_exif_tags(image, s3bucket):
 
 
 def lambda_handler(event, context):
-    """Lambda handler function runs once trigger is activated by configured event"""
+    """
+    Lambda handler function runs once trigger is activated by configured event.
+    Detailed configuration is in app SAM template.
+    """
 
     try:
         s3objkey = event['Records'][0]['s3']['object']['key']
         bucket = event['Records'][0]['s3']['bucket']['name']
 
+        print("\nDealing with {} image from album {}\n".format(str(s3objkey).split('/')[-1],
+                                                               str(s3objkey).split('/')[-2]))
+
         lbls = detect_rk_labels(s3objkey, bucket)
         exiftags = fetch_exif_tags(s3objkey, bucket)
+
+        print("\nTime remaining (MS):", context.get_remaining_time_in_millis())
 
         return lbls, exiftags
 
