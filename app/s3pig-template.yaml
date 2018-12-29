@@ -17,6 +17,20 @@ Resources:
     Properties:
       AccessControl: PublicRead
       BucketName: !Ref BucketNameParameter
+      CorsConfiguration:
+        CorsRules:
+          - CorsRule:
+              AllowedHeaders: 'Authorization'
+              AllowedMethods: 'GET'
+              AllowedOrigins: '*'
+              MaxAge: 3000
+          - CorsRule:
+              AllowedOrigin: 'http://s3-pig.s3-website-eu-west-1.amazonaws.com'
+              AllowedMethod:
+                - GET
+                - PUT
+                - POST
+              AllowedHeader: '*'
       WebsiteConfiguration:
         IndexDocument: index.html
 
@@ -39,7 +53,3 @@ Resources:
             Filter:
               S3Key: '.jpg'
 
-Outputs:
-  WebsiteURL:
-    Value: !GetAtt [S3BucketPhotoHosting, WebsiteURL]
-    Description: URL for website hosted on S3
