@@ -1,43 +1,27 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Template for S3 Photo Index Gallery (S3-PIG) service
 
-Parameters:
-  BucketNameParameter:
-    Description: Specify name of the bucket
-    Type: String
-    AllowedPattern: '[a-z0-9]+'
-    Default: s3-pig
-    ConstraintDescription: must contain only lowercase letters or digits
-
 Transform: 'AWS::Serverless-2016-10-31'
+
+Parameters:
+  PhotoBucketName:
+    Type: String
+    Default: as3-pig
+    Description: Bucket name for storing images and hosting Photo Index Gallery (S3-PIG)
 
 Resources:
   S3BucketPhotoHosting:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: PublicRead
-      BucketName: !Ref BucketNameParameter
-      CorsConfiguration:
-        CorsRules:
-          - CorsRule:
-              AllowedHeaders: 'Authorization'
-              AllowedMethods: 'GET'
-              AllowedOrigins: '*'
-              MaxAge: 3000
-          - CorsRule:
-              AllowedOrigin: 'http://s3-pig.s3-website-eu-west-1.amazonaws.com'
-              AllowedMethod:
-                - GET
-                - PUT
-                - POST
-              AllowedHeader: '*'
+      BucketName: !Ref PhotoBucketName
       WebsiteConfiguration:
         IndexDocument: index.html
 
   S3PigFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Description: Detects image attributes and saves for use with Photo Index Gallery (S3-PIG)
+      Description: Detects uploaded image attributes and saves for use with Photo Index Gallery (S3-PIG)
       Handler: s3pigfunction.lambda_handler
       Runtime: python3.6
       CodeUri: .
@@ -47,9 +31,12 @@ Resources:
         FileUploadEvent:
           Type: S3
           Properties:
-            Bucket: !Ref S3BucketPhotoHosting
+            Bucket:
+              Ref: S3BucketPhotoHosting
             Events:
               - 's3:ObjectCreated:*'
             Filter:
-              S3Key: '.jpg'
-
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.jpg'
