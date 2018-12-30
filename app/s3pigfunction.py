@@ -7,9 +7,9 @@ import exifread as exif
 
 MY_REGION = 'eu-west-1'
 JSON_CONFIG_FILE = 'pigconfig.json'
-REKOGNITION_IMG_SIZE_LIMIT = 15*1024*11024  # Check AWS limitations
+REKOGNITION_IMG_SIZE_LIMIT = 15*1024*1024  # Check AWS limitations
 
-lambda_client = boto3.client('lambda')
+# lambda_client = boto3.client('lambda')
 
 print('Loading function')
 
@@ -17,7 +17,6 @@ print('Loading function')
 def detect_rk_labels(image, s3bucket):
     """
     Function for discovering image labels with AWS Rekognition.
-    ISO datetime format: YYYY-MM-DDThh:mm:ss.sTZD
 
     :param image: S3 object key for uploaded image file
     :param s3bucket: S3 bucket with image
@@ -53,7 +52,7 @@ def detect_rk_labels(image, s3bucket):
 
 def fetch_exif_tags(image, s3bucket):
     """
-    Function for detecting predefined list of image EXIF tags
+    Function for detecting predefined, limited list of image EXIF tags.
 
     :param image: S3 object key for uploaded image file
     :param s3bucket: S3 bucket with image
@@ -95,11 +94,11 @@ def fetch_exif_tags(image, s3bucket):
 
         for tag in exif_tags.keys():
 
-            if tag in (useful_exif_tags):  # Filtering whole EXIF array to select only list of useful
+            if tag in useful_exif_tags:  # Filtering whole EXIF array to select only list of useful
 
                 if tag == 'Image DateTime':  # Creating datetime in ISO format
                     shoot_date = datetime.datetime.strptime(exif_tags[tag].printable, "%Y:%m:%d %H:%M:%S").isoformat()
-                    exifs_dict.update({tag: shoot_date})
+                    exifs_dict.update({'ShootingTime': shoot_date})
                 elif tag.startswith('EXIF'):
                     exif_tag_str = tag.lstrip('EXIF')
                     exifs_dict.update({exif_tag_str.lstrip(): exif_tags[tag].printable})
@@ -116,11 +115,11 @@ def fetch_exif_tags(image, s3bucket):
 
 
 def create_pig_config(image, s3bucket, lbls, etags):
-    """Writes image attributes to gallery JSON config"""
+    """ Creates new gallery JSON config with image attributes """
 
     try:
         config_file_temp_path = '/tmp/' + JSON_CONFIG_FILE
-        config_file_bucket_key = 'js/' + JSON_CONFIG_FILE
+        config_file_bucket_key = 'js/' + JSON_CONFIG_FILE  # Rebuild to avoid hardcoded path to config
 
         s3_client = boto3.client('s3', region_name=MY_REGION)
 
@@ -132,11 +131,86 @@ def create_pig_config(image, s3bucket, lbls, etags):
         img_attributes['RkLabels'] = lbls
         img_attributes['EXIF_Tags'] = etags
 
+        list_of_photos = [img_attributes]
+
         with open(config_file_temp_path, 'w') as jfw:  # Writes file to Lambda instance folder /tmp
-            json.dump(img_attributes, jfw, indent=4)
+            json.dump(list_of_photos, jfw, indent=4)
 
         with open(config_file_temp_path, 'rb') as content:
             s3_client.upload_fileobj(content, s3bucket, config_file_bucket_key)
+            print("Fresh config file {} created".format(config_file_bucket_key))
+
+    except Exception as e:
+        print('Error while writing JSON file: ', e)
+
+
+def is_key_exists(client, bucket, key):
+    """
+    :param client: S3 boto3 client
+    :param bucket: S3 bucket
+    :param key: S3 object key (path to file within bucket)
+    :return: True if object exists in bucket, False if not
+    """
+
+    response = client.list_objects_v2(
+        Bucket=bucket,
+        Prefix=key,
+    )
+    for obj in response.get('Contents', []):
+        if obj['Key'] == key:
+            return True
+        else:
+            return False
+
+
+def update_pig_config(image, s3bucket, lbls, etags):
+    """
+    Updates image attributes to gallery JSON config
+
+    :param image: S3 object key for uploaded image
+    :param s3bucket: name of the bucket
+    :param lbls: list of detected Rekognition labels
+    :param etags: dict of fetched EXIF tags
+
+    :return: None. Updated config file, log entries
+    """
+
+    try:
+        config_file_temp_path = '/tmp/' + JSON_CONFIG_FILE
+        config_file_bucket_key = 'js/' + JSON_CONFIG_FILE  # Rebuild to avoid hardcoded path to config
+
+        s3_client = boto3.client('s3', region_name=MY_REGION)
+
+        if not is_key_exists(s3_client, s3bucket, config_file_bucket_key):
+            create_pig_config(image, s3bucket, lbls, etags)
+
+        with open(config_file_temp_path, 'wb') as data:  # Download pigconfig.json from S3 to Lambda /tmp
+            s3_client.download_fileobj(s3bucket, config_file_bucket_key, data)
+
+        with open(config_file_temp_path, 'r') as file:  # Read JSON structure
+            json_object = json.load(file)
+
+        for item in json_object:
+            if not item['FileName'] == image:  # No duplicate entries found
+
+                img_attributes = {}
+
+                img_attributes['FileName'] = image
+                img_attributes['UploadTime'] = s3_client.get_object(Bucket=s3bucket,
+                                                                    Key=image)['LastModified'].isoformat()
+
+                img_attributes['RkLabels'] = lbls
+                img_attributes['EXIF_Tags'] = etags
+
+                list_of_photos = json_object + [img_attributes]
+
+                with open(config_file_temp_path, 'w') as jfw:  # Updates pigconfig.json in Lambda /tmp
+                    json.dump(list_of_photos, jfw, indent=4)
+
+                with open(config_file_temp_path, 'rb') as content:  # Upload updated config back to S3 bucket
+                    s3_client.upload_fileobj(content, s3bucket, config_file_bucket_key)
+            else:
+                print("Update SKIPPED: object {} found in config file ".format(image))
 
     except Exception as e:
         print('Error while writing JSON file: ', e)
@@ -151,14 +225,14 @@ def lambda_handler(event, context):
     try:
         s3objkey = event['Records'][0]['s3']['object']['key']
         bucket = event['Records'][0]['s3']['bucket']['name']
-        event_time = event['Records'][0]['eventTime']
+        # event_time = event['Records'][0]['eventTime']
 
         print("\nDealing with <- {} -> image from album [- {} -]".format(str(s3objkey).split('/')[-1],
-                                                                     str(s3objkey).split('/')[-2]))
+                                                                         str(s3objkey).split('/')[-2]))
 
         lbls = detect_rk_labels(s3objkey, bucket)
         exiftags = fetch_exif_tags(s3objkey, bucket)
-        create_pig_config(s3objkey, bucket, lbls, exiftags)
+        update_pig_config(s3objkey, bucket, lbls, exiftags)
 
         print("\nTime remaining (MS): {}\n".format(context.get_remaining_time_in_millis()))
 
