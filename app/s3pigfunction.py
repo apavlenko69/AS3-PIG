@@ -181,36 +181,37 @@ def update_pig_config(image, s3bucket, lbls, etags):
 
         s3_client = boto3.client('s3', region_name=MY_REGION)
 
-        if not is_key_exists(s3_client, s3bucket, config_file_bucket_key):
+        if is_key_exists(s3_client, s3bucket, config_file_bucket_key):  # Config file exists
+
+            with open(config_file_temp_path, 'wb') as data:  # Download pigconfig.json from S3 to Lambda /tmp
+                s3_client.download_fileobj(s3bucket, config_file_bucket_key, data)
+
+            with open(config_file_temp_path, 'r') as file:  # Read JSON structure
+                json_object = json.load(file)
+
+            for item in json_object:
+                if not item['FileName'] == image:  # No duplicate entries found
+
+                    img_attributes = {}
+
+                    img_attributes['FileName'] = image
+                    img_attributes['UploadTime'] = s3_client.get_object(Bucket=s3bucket,
+                                                                        Key=image)['LastModified'].isoformat()
+
+                    img_attributes['RkLabels'] = lbls
+                    img_attributes['EXIF_Tags'] = etags
+
+                    list_of_photos = json_object + [img_attributes]
+
+                    with open(config_file_temp_path, 'w') as jfw:  # Updates pigconfig.json in Lambda /tmp
+                        json.dump(list_of_photos, jfw, indent=4)
+
+                    with open(config_file_temp_path, 'rb') as content:  # Upload updated config back to S3 bucket
+                        s3_client.upload_fileobj(content, s3bucket, config_file_bucket_key)
+                else:
+                    print("Update SKIPPED: object {} found in config file ".format(image))
+        else:
             create_pig_config(image, s3bucket, lbls, etags)
-
-        with open(config_file_temp_path, 'wb') as data:  # Download pigconfig.json from S3 to Lambda /tmp
-            s3_client.download_fileobj(s3bucket, config_file_bucket_key, data)
-
-        with open(config_file_temp_path, 'r') as file:  # Read JSON structure
-            json_object = json.load(file)
-
-        for item in json_object:
-            if not item['FileName'] == image:  # No duplicate entries found
-
-                img_attributes = {}
-
-                img_attributes['FileName'] = image
-                img_attributes['UploadTime'] = s3_client.get_object(Bucket=s3bucket,
-                                                                    Key=image)['LastModified'].isoformat()
-
-                img_attributes['RkLabels'] = lbls
-                img_attributes['EXIF_Tags'] = etags
-
-                list_of_photos = json_object + [img_attributes]
-
-                with open(config_file_temp_path, 'w') as jfw:  # Updates pigconfig.json in Lambda /tmp
-                    json.dump(list_of_photos, jfw, indent=4)
-
-                with open(config_file_temp_path, 'rb') as content:  # Upload updated config back to S3 bucket
-                    s3_client.upload_fileobj(content, s3bucket, config_file_bucket_key)
-            else:
-                print("Update SKIPPED: object {} found in config file ".format(image))
 
     except Exception as e:
         print('Error while writing JSON file: ', e)
@@ -231,6 +232,7 @@ def lambda_handler(event, context):
                                                                          str(s3objkey).split('/')[-2]))
 
         lbls = detect_rk_labels(s3objkey, bucket)
+        # lbls = []  # For testing and to avoid extra billing for Rekognition labels detection
         exiftags = fetch_exif_tags(s3objkey, bucket)
         update_pig_config(s3objkey, bucket, lbls, exiftags)
 
