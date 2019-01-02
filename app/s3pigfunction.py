@@ -5,7 +5,9 @@ import json
 import datetime
 import exifread as exif
 
-MY_REGION = 'eu-west-1'
+
+aws_region = ''  # Specific value defined in Lambda handler from Event parameter object
+
 JSON_CONFIG_FILE = 'pigconfig.json'
 REKOGNITION_IMG_SIZE_LIMIT = 15*1024*1024  # Check AWS limitations
 
@@ -25,7 +27,7 @@ def detect_rk_labels(image, s3bucket):
     """
 
     try:
-        rk_client = boto3.client('rekognition', region_name=MY_REGION)
+        rk_client = boto3.client('rekognition', region_name=aws_region)
 
         labels = []
 
@@ -60,7 +62,7 @@ def fetch_exif_tags(image, s3bucket):
     :return: dictionary of selected EXIF tags
     """
 
-    s3client = boto3.client('s3', region_name=MY_REGION)
+    s3client = boto3.client('s3', region_name=aws_region)
 
     useful_exif_tags = [  # List of useful EXIF tags
         'Image Make',
@@ -121,7 +123,7 @@ def create_pig_config(image, s3bucket, lbls, etags):
         config_file_temp_path = '/tmp/' + JSON_CONFIG_FILE
         config_file_bucket_key = 'js/' + JSON_CONFIG_FILE  # Rebuild to avoid hardcoded path to config
 
-        s3_client = boto3.client('s3', region_name=MY_REGION)
+        s3_client = boto3.client('s3', region_name=aws_region)
 
         img_attributes = {}
 
@@ -177,9 +179,9 @@ def update_pig_config(image, s3bucket, lbls, etags):
 
     try:
         config_file_temp_path = '/tmp/' + JSON_CONFIG_FILE
-        config_file_bucket_key = 'js/' + JSON_CONFIG_FILE  # Rebuild to avoid hardcoded path to config
+        config_file_bucket_key = 'js/' + JSON_CONFIG_FILE  # Todo: Rebuild to avoid hardcoded path to config
 
-        s3_client = boto3.client('s3', region_name=MY_REGION)
+        s3_client = boto3.client('s3', region_name=aws_region)
 
         if is_key_exists(s3_client, s3bucket, config_file_bucket_key):  # Config file exists
 
@@ -190,7 +192,7 @@ def update_pig_config(image, s3bucket, lbls, etags):
                 json_object = json.load(file)
 
             for item in json_object:
-                if not item['FileName'] == image:  # No duplicate entries found
+                if not item['FileName'] == image:  # No duplicate entries in config file
 
                     img_attributes = {}
 
@@ -203,7 +205,7 @@ def update_pig_config(image, s3bucket, lbls, etags):
 
                     list_of_photos = json_object + [img_attributes]
 
-                    with open(config_file_temp_path, 'w') as jfw:  # Updates pigconfig.json in Lambda /tmp
+                    with open(config_file_temp_path, 'w') as jfw:  # Updates gallery config json in Lambda /tmp
                         json.dump(list_of_photos, jfw, indent=4)
 
                     with open(config_file_temp_path, 'rb') as content:  # Upload updated config back to S3 bucket
@@ -220,19 +222,30 @@ def update_pig_config(image, s3bucket, lbls, etags):
 def lambda_handler(event, context):
     """
     Lambda handler function runs once trigger is activated by configured event.
-    Detailed configuration is in app SAM template.
+
+    Todo:
+        Custom exceptions:
+        - First check if identical image was already processed to avoid unnecessary charges
+        - Skip processing of images exceeding any of Rekognition limits:
+            * Maximum image size stored as an Amazon S3 object is limited to 15 MB.
+            * The minimum pixel resolution for height and width is 80 pixels
+            * The Maximum images size as raw bytes passed in as parameter to an API is 5 MB.
+            * Amazon Rekognition supports the PNG and JPEG image formats.
     """
 
     try:
+
+        global aws_region
+
+        aws_region = event['Records'][0]['awsRegion']
+
         s3objkey = event['Records'][0]['s3']['object']['key']
         bucket = event['Records'][0]['s3']['bucket']['name']
-        # event_time = event['Records'][0]['eventTime']
-
+        
         print("\nDealing with <- {} -> image from album [- {} -]".format(str(s3objkey).split('/')[-1],
                                                                          str(s3objkey).split('/')[-2]))
 
         lbls = detect_rk_labels(s3objkey, bucket)
-        # lbls = []  # For testing and to avoid extra billing for Rekognition labels detection
         exiftags = fetch_exif_tags(s3objkey, bucket)
         update_pig_config(s3objkey, bucket, lbls, exiftags)
 
