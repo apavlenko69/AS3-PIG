@@ -128,7 +128,7 @@
         <span class="w3-small" ng-show="showfn">
           <b> <i class="fa fa-arrow-right"></i> File:</b> {{image.FileName}}</span>
           <br>
-      <img class="w3-image w3-card-4" title="{{image.EXIF_Tags.ShootingDateTime | date}}" alt="{{image.RkLabels[0].Name}}"
+      <img class="w3-image w3-card-4" title="{{image.EXIF_Tags.ShootingTime | date}}" alt="{{image.RkLabels[0].Name}}"
         ng-src="{{myBucketURL + image.FileName}}">
       <br>
 
