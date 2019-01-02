@@ -25,6 +25,9 @@ Resources:
       Handler: s3pigfunction.lambda_handler
       Runtime: python3.6
       CodeUri: .
+      Policies:
+        - AmazonS3FullAccess
+        - AmazonRekognitionReadOnlyAccess
       MemorySize: 128
       Timeout: 30
       Events:
