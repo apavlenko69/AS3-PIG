@@ -1,4 +1,7 @@
-"""AS3 Photo Index Gallery """
+"""
+    AS3 Photo Index Gallery
+    Lambda function for created images
+"""
 
 import boto3
 import json
