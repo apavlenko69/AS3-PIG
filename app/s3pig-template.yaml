@@ -10,19 +10,11 @@ Parameters:
     Description: Bucket name for storing images and hosting Photo Index Gallery (S3-PIG)
 
 Resources:
-  S3BucketPhotoHosting:
-    Type: AWS::S3::Bucket
-    Properties:
-      AccessControl: PublicRead
-      BucketName: !Ref PhotoBucketName
-      WebsiteConfiguration:
-        IndexDocument: index.html
-
-  S3PigFunction:
+  S3PigFunctionCreate:
     Type: 'AWS::Serverless::Function'
     Properties:
       Description: Detects uploaded image attributes and saves for use with Photo Index Gallery (S3-PIG)
-      Handler: s3pigfunction.lambda_handler
+      Handler: s3pigfunction-c.lambda_handler
       Runtime: python3.6
       CodeUri: .
       Policies:
@@ -44,12 +36,56 @@ Resources:
                   - Name: suffix
                     Value: '.jpg'
 
+  S3PigFunctionDelete:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Description: Deletes image record from Photo Index Gallery (S3-PIG) JSON config
+      Handler: s3pigfunction-d.lambda_handler
+      Runtime: python3.6
+      CodeUri: .
+      Policies:
+        - AmazonS3FullAccess
+      MemorySize: 128
+      Timeout: 30
+      Events:
+        FileUploadEvent:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: S3BucketPhotoHosting
+            Events:
+              - 's3:ObjectDeleted:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.jpg'
+
+  S3BucketPhotoHosting:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref PhotoBucketName
+      CorsConfiguration:
+        CorsRules:
+          -
+            AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - "GET"
+            AllowedOrigins:
+              - "*"
+            MaxAge: 3000
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+
   PublicBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket:
         Ref: S3BucketPhotoHosting
       PolicyDocument:
+        Version: 2012-10-17
         Statement:
           - Action:
               - "s3:GetObject"
