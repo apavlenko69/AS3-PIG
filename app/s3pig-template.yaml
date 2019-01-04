@@ -19,6 +19,7 @@ Resources:
       CodeUri: .
       Policies:
         - AmazonS3FullAccess
+        - AmazonDynamoDBFullAccess
         - AmazonRekognitionReadOnlyAccess
       MemorySize: 128
       Timeout: 30
@@ -45,6 +46,7 @@ Resources:
       CodeUri: .
       Policies:
         - AmazonS3FullAccess
+        - AmazonDynamoDBFullAccess
       MemorySize: 128
       Timeout: 30
       Events:
@@ -54,7 +56,7 @@ Resources:
             Bucket:
               Ref: S3BucketPhotoHosting
             Events:
-              - 's3:ObjectDeleted:*'
+              - 's3:ObjectRemoved:*'
             Filter:
               S3Key:
                 Rules:
@@ -99,3 +101,27 @@ Resources:
                     Ref: S3BucketPhotoHosting
                   - "/*"
             Principal: "*"
+
+  S3PigDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: S3PigImageAttributes
+      KeySchema:
+        -
+          AttributeName: 'FileName'
+          KeyType: HASH
+        -
+          AttributeName: 'UploadTime'
+          KeyType: RANGE
+      AttributeDefinitions:
+        -
+          AttributeName: 'FileName'
+          AttributeType: 'S'
+        -
+          AttributeName: 'UploadTime'
+          AttributeType: 'S'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+
