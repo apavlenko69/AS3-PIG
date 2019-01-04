@@ -1,6 +1,6 @@
 """
     AS3 Photo Index Gallery
-    Lambda function for created images
+    Lambda function for uploaded images
 """
 
 import boto3
@@ -9,17 +9,15 @@ import datetime
 import exifread as exif
 
 
-aws_region = ''  # Specific value defined in Lambda handler from Event parameter object
+aws_region = ''  # Specific value defined in Lambda handler from Event parameter-object
 
 JSON_CONFIG_FILE = 'pigconfig.json'
-REKOGNITION_IMG_SIZE_LIMIT = 15*1024*1024  # Check AWS limitations
 
-# lambda_client = boto3.client('lambda')
 
 print('Loading function')
 
 
-def detect_rk_labels(image, s3bucket):
+def detect_rk_labels(image, img_size, s3bucket):
     """
     Function for discovering image labels with AWS Rekognition.
 
@@ -27,28 +25,44 @@ def detect_rk_labels(image, s3bucket):
     :param s3bucket: S3 bucket with image
 
     returns: dictionary of detected labels with probability numbers
+
+    Todo:
+        Custom exceptions:
+        - Skip processing of images exceeding any of Rekognition limits:
+            * Maximum image size stored as an Amazon S3 object is limited to 15 MB.
+            * The minimum pixel resolution for height and width is 80 pixels
+            * The Maximum images size as raw bytes passed in as parameter to an API is 5 MB.
+            * Amazon Rekognition supports the PNG and JPEG image formats.
     """
 
+    accepted_image_types = ['jpg', 'JPG', 'png', 'PNG']
+    rekognition_img_size_limit = 15 * 1024 * 1024
+
     try:
-        rk_client = boto3.client('rekognition', region_name=aws_region)
+        if str(image).split('/')[-1].split('.')[-1] in accepted_image_types \
+                and float(img_size) < rekognition_img_size_limit:
 
-        labels = []
+            rk_client = boto3.client('rekognition', region_name=aws_region)
 
-        resp = rk_client.detect_labels(
-            Image={
-                'S3Object': {
-                    'Bucket': s3bucket,
-                    'Name': image,
+            labels = []
+
+            resp = rk_client.detect_labels(
+                Image={
+                    'S3Object': {
+                        'Bucket': s3bucket,
+                        'Name': image,
+                        },
                     },
-                },
-            MaxLabels=3,
-            MinConfidence=70,
-        )
+                MaxLabels=3,
+                MinConfidence=70,
+            )
 
-        for i_list in resp['Labels']:
-            labels.append({'Name': i_list['Name'], 'Confidence': int(i_list['Confidence'])})
+            for i_list in resp['Labels']:
+                labels.append({'Name': i_list['Name'], 'Confidence': int(i_list['Confidence'])})
 
-        return labels
+            return labels
+        else:
+            print("Labels detection skipped for {} because of service constraints violation".format(image))
 
     except Exception as e:
         print("Rekognition labels detection skipped because of the following error: ", e)
@@ -151,9 +165,12 @@ def create_pig_config(image, s3bucket, lbls, etags):
 
 def is_key_exists(client, bucket, key):
     """
+    Checks presence of object in S3 bucket
+
     :param client: S3 boto3 client
     :param bucket: S3 bucket
     :param key: S3 object key (path to file within bucket)
+
     :return: True if object exists in bucket, False if not
     """
 
@@ -227,13 +244,7 @@ def lambda_handler(event, context):
     Lambda handler function runs once trigger is activated by configured event.
 
     Todo:
-        Custom exceptions:
-        - First check if identical image was already processed to avoid unnecessary charges
-        - Skip processing of images exceeding any of Rekognition limits:
-            * Maximum image size stored as an Amazon S3 object is limited to 15 MB.
-            * The minimum pixel resolution for height and width is 80 pixels
-            * The Maximum images size as raw bytes passed in as parameter to an API is 5 MB.
-            * Amazon Rekognition supports the PNG and JPEG image formats.
+        Custom exception: check if identical image was already processed to avoid unnecessary charges
     """
 
     try:
@@ -243,12 +254,13 @@ def lambda_handler(event, context):
         aws_region = event['Records'][0]['awsRegion']
 
         s3objkey = event['Records'][0]['s3']['object']['key']
+        s3objsize = event['Records'][0]['s3']['object']['size']
         bucket = event['Records'][0]['s3']['bucket']['name']
         
         print("\nDealing with <- {} -> image from album [- {} -]".format(str(s3objkey).split('/')[-1],
                                                                          str(s3objkey).split('/')[-2]))
 
-        lbls = detect_rk_labels(s3objkey, bucket)
+        lbls = detect_rk_labels(s3objkey, s3objsize, bucket)
         exiftags = fetch_exif_tags(s3objkey, bucket)
         update_pig_config(s3objkey, bucket, lbls, exiftags)
 
