@@ -1,17 +1,21 @@
 """
     AS3 Photo Index Gallery
-    Lambda function for uploaded images
+    Lambda function invokes for uploaded/updated/renamed images
 """
 
 import boto3
 import json
 import datetime
 import exifread as exif
+import simplejson
+import urllib.parse
 
 
-aws_region = ''  # Specific value defined in Lambda handler from Event parameter-object
-
-JSON_CONFIG_FILE = 'pigconfig.json'
+AWS_REGION = ''  # Specific value to be assigned in Lambda handler from Event parameter-object
+JSON_CONFIG_FILE = 'pigconfig.json'  # Gallery configuration file name
+CONFIG_FILE_TEMP_PATH = '/tmp/' + JSON_CONFIG_FILE  # /tmp is the only writable in Lambda
+CONFIG_FILE_BUCKET_KEY = 'js/' + JSON_CONFIG_FILE  #
+DDB_TABLE = 'S3PigImageAttributes'  # Value MUST be the same as in SAM YAML template
 
 
 print('Loading function')
@@ -22,17 +26,15 @@ def detect_rk_labels(image, img_size, s3bucket):
     Function for discovering image labels with AWS Rekognition.
 
     :param image: S3 object key for uploaded image file
+    :param img_size: size of the image
     :param s3bucket: S3 bucket with image
 
     returns: dictionary of detected labels with probability numbers
 
     Todo:
-        Custom exceptions:
-        - Skip processing of images exceeding any of Rekognition limits:
-            * Maximum image size stored as an Amazon S3 object is limited to 15 MB.
+        - Skip processing of images exceeding Rekognition limits:
             * The minimum pixel resolution for height and width is 80 pixels
             * The Maximum images size as raw bytes passed in as parameter to an API is 5 MB.
-            * Amazon Rekognition supports the PNG and JPEG image formats.
     """
 
     accepted_image_types = ['jpg', 'JPG', 'png', 'PNG']
@@ -42,7 +44,7 @@ def detect_rk_labels(image, img_size, s3bucket):
         if str(image).split('/')[-1].split('.')[-1] in accepted_image_types \
                 and float(img_size) < rekognition_img_size_limit:
 
-            rk_client = boto3.client('rekognition', region_name=aws_region)
+            rk_client = boto3.client('rekognition', region_name=AWS_REGION)
 
             labels = []
 
@@ -53,8 +55,8 @@ def detect_rk_labels(image, img_size, s3bucket):
                         'Name': image,
                         },
                     },
-                MaxLabels=3,
-                MinConfidence=70,
+                MaxLabels=5,
+                MinConfidence=80,
             )
 
             for i_list in resp['Labels']:
@@ -79,7 +81,7 @@ def fetch_exif_tags(image, s3bucket):
     :return: dictionary of selected EXIF tags
     """
 
-    s3client = boto3.client('s3', region_name=aws_region)
+    s3client = boto3.client('s3', region_name=AWS_REGION)
 
     useful_exif_tags = [  # List of useful EXIF tags
         'Image Make',
@@ -133,36 +135,6 @@ def fetch_exif_tags(image, s3bucket):
         print("EXIF tags fetching failed because of : ", e)
 
 
-def create_pig_config(image, s3bucket, lbls, etags):
-    """ Creates new gallery JSON config with image attributes """
-
-    try:
-        config_file_temp_path = '/tmp/' + JSON_CONFIG_FILE
-        config_file_bucket_key = 'js/' + JSON_CONFIG_FILE  # Rebuild to avoid hardcoded path to config
-
-        s3_client = boto3.client('s3', region_name=aws_region)
-
-        img_attributes = {}
-
-        img_attributes['FileName'] = image
-        img_attributes['UploadTime'] = s3_client.get_object(Bucket=s3bucket, Key=image)['LastModified'].isoformat()
-
-        img_attributes['RkLabels'] = lbls
-        img_attributes['EXIF_Tags'] = etags
-
-        list_of_photos = [img_attributes]
-
-        with open(config_file_temp_path, 'w') as jfw:  # Writes file to Lambda instance folder /tmp
-            json.dump(list_of_photos, jfw, indent=4)
-
-        with open(config_file_temp_path, 'rb') as content:
-            s3_client.upload_fileobj(content, s3bucket, config_file_bucket_key)
-            print("Fresh config file {} created".format(config_file_bucket_key))
-
-    except Exception as e:
-        print('Error while writing JSON file: ', e)
-
-
 def is_key_exists(client, bucket, key):
     """
     Checks presence of object in S3 bucket
@@ -185,9 +157,9 @@ def is_key_exists(client, bucket, key):
             return False
 
 
-def update_pig_config(image, s3bucket, lbls, etags):
+def update_pig_config_ddb(image, s3bucket, lbls, etags):
     """
-    Updates image attributes to gallery JSON config
+    Updates image attributes to gallery JSON config handled through DynamoDB
 
     :param image: S3 object key for uploaded image
     :param s3bucket: name of the bucket
@@ -198,42 +170,32 @@ def update_pig_config(image, s3bucket, lbls, etags):
     """
 
     try:
-        config_file_temp_path = '/tmp/' + JSON_CONFIG_FILE
-        config_file_bucket_key = 'js/' + JSON_CONFIG_FILE  # Todo: Rebuild to avoid hardcoded path to config
+        s3_client = boto3.client('s3', region_name=AWS_REGION)
+        ddb_table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(DDB_TABLE)
 
-        s3_client = boto3.client('s3', region_name=aws_region)
+        if ddb_table.table_status == 'ACTIVE':  # DynamoDB table exists and ready
 
-        if is_key_exists(s3_client, s3bucket, config_file_bucket_key):  # Config file exists
+            img_attributes = {}
 
-            with open(config_file_temp_path, 'wb') as data:  # Download pigconfig.json from S3 to Lambda /tmp
-                s3_client.download_fileobj(s3bucket, config_file_bucket_key, data)
+            img_attributes['FileName'] = image
+            img_attributes['UploadTime'] = s3_client.get_object(Bucket=s3bucket,
+                                                                Key=image)['LastModified'].isoformat()
 
-            with open(config_file_temp_path, 'r') as file:  # Read JSON structure
-                json_object = json.load(file)
+            img_attributes['RkLabels'] = lbls
+            img_attributes['EXIF_Tags'] = etags
 
-            for item in json_object:
-                if not item['FileName'] == image:  # No duplicate entries in config file
+            ddb_table.put_item(Item=img_attributes)
+            ddb_reply = ddb_table.scan(Select="ALL_ATTRIBUTES")  # Full DB scan to pull updated data
+            list_of_photos = [i for i in ddb_reply['Items']]
 
-                    img_attributes = {}
+            with open(CONFIG_FILE_TEMP_PATH, 'w') as jfw:  # Updates gallery config json in Lambda /tmp
+                simplejson.dump(list_of_photos, jfw, indent=4)
 
-                    img_attributes['FileName'] = image
-                    img_attributes['UploadTime'] = s3_client.get_object(Bucket=s3bucket,
-                                                                        Key=image)['LastModified'].isoformat()
+            with open(CONFIG_FILE_TEMP_PATH, 'rb') as content:  # Upload updated config back to S3 bucket
+                s3_client.upload_fileobj(content, s3bucket, CONFIG_FILE_BUCKET_KEY)
 
-                    img_attributes['RkLabels'] = lbls
-                    img_attributes['EXIF_Tags'] = etags
-
-                    list_of_photos = json_object + [img_attributes]
-
-                    with open(config_file_temp_path, 'w') as jfw:  # Updates gallery config json in Lambda /tmp
-                        json.dump(list_of_photos, jfw, indent=4)
-
-                    with open(config_file_temp_path, 'rb') as content:  # Upload updated config back to S3 bucket
-                        s3_client.upload_fileobj(content, s3bucket, config_file_bucket_key)
-                else:
-                    print("Update SKIPPED: object {} found in config file ".format(image))
         else:
-            create_pig_config(image, s3bucket, lbls, etags)
+            print("Error: DynamoDB table resource was not available")
 
     except Exception as e:
         print('Error while writing JSON file: ', e)
@@ -249,11 +211,11 @@ def lambda_handler(event, context):
 
     try:
 
-        global aws_region
+        global AWS_REGION
 
-        aws_region = event['Records'][0]['awsRegion']
+        AWS_REGION = event['Records'][0]['awsRegion']
 
-        s3objkey = event['Records'][0]['s3']['object']['key']
+        s3objkey = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
         s3objsize = event['Records'][0]['s3']['object']['size']
         bucket = event['Records'][0]['s3']['bucket']['name']
         
@@ -262,7 +224,7 @@ def lambda_handler(event, context):
 
         lbls = detect_rk_labels(s3objkey, s3objsize, bucket)
         exiftags = fetch_exif_tags(s3objkey, bucket)
-        update_pig_config(s3objkey, bucket, lbls, exiftags)
+        update_pig_config_ddb(s3objkey, bucket, lbls, exiftags)
 
         print("\nTime remaining (MS): {}\n".format(context.get_remaining_time_in_millis()))
 
