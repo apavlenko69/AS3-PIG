@@ -110,15 +110,9 @@ Resources:
         -
           AttributeName: 'FileName'
           KeyType: HASH
-        -
-          AttributeName: 'UploadTime'
-          KeyType: RANGE
       AttributeDefinitions:
         -
           AttributeName: 'FileName'
-          AttributeType: 'S'
-        -
-          AttributeName: 'UploadTime'
           AttributeType: 'S'
       ProvisionedThroughput:
         ReadCapacityUnits: 5
