@@ -36,6 +36,8 @@ Resources:
                 Rules:
                   - Name: suffix
                     Value: '.jpg'
+                  - Name: prefix
+                    Value: 'img/'
 
   S3PigFunctionDelete:
     Type: 'AWS::Serverless::Function'
@@ -48,7 +50,7 @@ Resources:
         - AmazonS3FullAccess
         - AmazonDynamoDBFullAccess
       MemorySize: 128
-      Timeout: 30
+      Timeout: 10
       Events:
         FileUploadEvent:
           Type: S3
@@ -62,11 +64,14 @@ Resources:
                 Rules:
                   - Name: suffix
                     Value: '.jpg'
+                  - Name: prefix
+                    Value: 'img/'
 
   S3BucketPhotoHosting:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref PhotoBucketName
+      AccessControl: PublicRead
       CorsConfiguration:
         CorsRules:
           -
@@ -105,7 +110,7 @@ Resources:
   S3PigDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: S3PigImageAttributes
+      TableName: "S3PigImageAttributes"
       KeySchema:
         -
           AttributeName: 'FileName'
@@ -118,4 +123,28 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
+  S3Copy:
+    Type: Custom::S3Copy
+    Properties:
+      Region: !Ref 'AWS::Region'
+      ServiceToken: !GetAtt FunctionGitToS3Copy.Arn
+      TargetS3BucketName:
+        Ref: S3BucketPhotoHosting
+      SourceUrls:
+        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/index.html'
+        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/js/s3pi_grid.js'
+        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/css/grid_gallery.css'
+        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/img/readme.txt'
+
+  FunctionGitToS3Copy:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Description: Copies static files from Github to S3 bucket as part of deploy
+      Handler: gittos3copy.lambda_handler
+      Runtime: python3.6
+      CodeUri: .
+      Policies:
+        - AmazonS3FullAccess
+      MemorySize: 128
+      Timeout: 30
 
