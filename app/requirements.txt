@@ -1,0 +1,3 @@
+exifread
+simplejson
+cfnresponse
