@@ -50,7 +50,7 @@ def update_pig_config(image, s3bucket):
 
 def lambda_handler(event, context):
     """
-    Lambda handler function runs once trigger is activated by configured event.
+    Lambda handler function runs once ObjectRemoved trigger is activated by configured event.
 
     """
 
