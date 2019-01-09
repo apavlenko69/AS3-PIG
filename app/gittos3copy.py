@@ -9,7 +9,8 @@ import cfnresponse
 import urllib.request
 from urllib.parse import urlparse
 
-s3_client = boto3.client('s3', region_name='eu-west-1')
+AWS_REGION = ''  # Specific value to be assigned in Lambda handler from Event parameter-object
+s3_client = boto3.client('s3', region_name=AWS_REGION)
 
 
 def save_to_local(url):
@@ -39,6 +40,10 @@ def lambda_handler(event, context):
     """Invokes as part of deployment"""
 
     print("Received event: " + json.dumps(event, indent=2))
+
+    global AWS_REGION
+
+    AWS_REGION = event['ResourceProperties']['Region']
 
     if event['RequestType'] == 'Create':
 
