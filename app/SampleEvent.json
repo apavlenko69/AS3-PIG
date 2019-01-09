@@ -28,7 +28,7 @@
         "x-amz-request-id": "EXAMPLE123456789"
       }, 
       "awsRegion": "eu-west-1", 
-      "eventName": "ObjectCreated:Put", 
+      "eventName": "ObjectCreated:*",
       "userIdentity": {
         "principalId": "EXAMPLE"
       }, 
