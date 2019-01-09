@@ -83,7 +83,7 @@ def fetch_exif_tags(image, s3bucket):
 
     s3client = boto3.client('s3', region_name=AWS_REGION)
 
-    useful_exif_tags = [  # List of useful EXIF tags
+    useful_exif_tags = [  # List of useful EXIF tags as presented in ExifRead
         'Image Make',
         'Image Model',
         'Image DateTime',
@@ -114,18 +114,21 @@ def fetch_exif_tags(image, s3bucket):
         exifs_dict = {}
 
         for tag in exif_tags.keys():
-
             if tag in useful_exif_tags:  # Filtering whole EXIF array to select only list of useful
 
                 if tag == 'Image DateTime':  # Creating datetime in ISO format
-                    shoot_date = datetime.datetime.strptime(exif_tags[tag].printable, "%Y:%m:%d %H:%M:%S").isoformat()
+                    shoot_date = datetime.datetime.strptime(exif_tags[tag].printable,
+                                                            "%Y:%m:%d %H:%M:%S").isoformat()
                     exifs_dict.update({'ShootingTime': shoot_date})
+
                 elif tag.startswith('EXIF'):
                     exif_tag_str = tag.lstrip('EXIF')
                     exifs_dict.update({exif_tag_str.lstrip(): exif_tags[tag].printable})
+
                 elif tag.startswith('GPS'):
                     exif_tag_str = tag.lstrip('GPS')
                     exifs_dict.update({exif_tag_str.lstrip(): exif_tags[tag].printable})
+
                 else:
                     exifs_dict.update({tag: exif_tags[tag].printable})
 
