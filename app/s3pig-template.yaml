@@ -82,6 +82,15 @@ Resources:
             AllowedOrigins:
               - "*"
             MaxAge: 3000
+          -
+            AllowedOrigins:
+              - Fn::Sub: "http://${PhotoBucketName}.s3-website-${AWS::Region}.${AWS::URLSuffix}"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+            AllowedHeaders:
+              - "*"
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
@@ -98,13 +107,7 @@ Resources:
               - "s3:GetObject"
             Effect: "Allow"
             Resource:
-              Fn::Join:
-                - ""
-                -
-                  - "arn:aws:s3:::"
-                  -
-                    Ref: S3BucketPhotoHosting
-                  - "/*"
+              Fn::Sub: "arn:aws:s3:::${PhotoBucketName}/*"
             Principal: "*"
 
   S3PigDynamoDBTable:
@@ -123,23 +126,26 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
-  S3Copy:
-    Type: Custom::S3Copy
+  GitToS3Copy:
+    Type: Custom::GitToS3Copy
     Properties:
-      Region: !Ref 'AWS::Region'
+      awsRegion:
+        Fn::Sub: "${AWS::Region}"
       ServiceToken: !GetAtt FunctionGitToS3Copy.Arn
       TargetS3BucketName:
         Ref: S3BucketPhotoHosting
       SourceUrls:
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/index.html'
+        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/error.html'
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/js/s3pi_grid.js'
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/css/grid_gallery.css'
+        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/css/error.css'
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/img/readme.txt'
 
   FunctionGitToS3Copy:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Description: Copies static files from Github to S3 bucket as part of deploy
+      Description: Copies static files from Github to S3 bucket as part of deployment
       Handler: gittos3copy.lambda_handler
       Runtime: python3.6
       CodeUri: .
@@ -147,4 +153,13 @@ Resources:
         - AmazonS3FullAccess
       MemorySize: 128
       Timeout: 30
+
+Outputs:
+  BucketName:
+    Value: !Ref S3BucketPhotoHosting
+    Description: Bucket name for AS3-PIG gallery
+  WebsiteURL:
+    Value:
+      Fn::GetAtt: S3BucketPhotoHosting.WebsiteURL
+    Description: URL for the gallery hosted on S3
 
