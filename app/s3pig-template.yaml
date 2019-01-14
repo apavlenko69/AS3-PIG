@@ -1,7 +1,20 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Template for S3 Photo Index Gallery (S3-PIG) service
+Description: S3 Photo Index Gallery (S3-PIG) service
 
 Transform: 'AWS::Serverless-2016-10-31'
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: AS3-PIG
+    Description: S3 Photo Index Gallery (S3-PIG) service
+    Author: apavlenko69
+    SpdxLicenseId: Apache-2.0
+    LicenseUrl: https://spdx.org/licenses/Apache-2.0.html
+    ReadmeUrl: https://github.com/apavlenko69/AS3-PIG/blob/master/README.md
+    Labels: ['photo-gallery', 'serverless-application', 'python3', 'aws-lambda']
+    HomePageUrl: http://as3-pig.s3-website-eu-west-1.amazonaws.com/
+    SemanticVersion: 0.0.1
+    SourceCodeUrl: https://github.com/apavlenko69/AS3-PIG
 
 Parameters:
   PhotoBucketName:
@@ -137,7 +150,7 @@ Resources:
       SourceUrls:
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/index.html'
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/error.html'
-        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/js/s3pi_grid.js'
+        - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/js/s3pi_grid_template.js'
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/css/grid_gallery.css'
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/css/error.css'
         - 'https://raw.githubusercontent.com/apavlenko69/AS3-PIG/master/img/readme.txt'
