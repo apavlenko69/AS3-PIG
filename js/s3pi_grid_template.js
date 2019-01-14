@@ -70,7 +70,7 @@ s3pigrid.controller('S3PIGalleryConfig', function($scope, $rootScope, $http, $sc
       $scope.trustSrc = function(obj) {
         lat = $scope.eGPStoDD(obj)[0];
         lon = $scope.eGPStoDD(obj)[1];
-        api_key = "AIzaSyDCBDh5PrbSC9G-m4G3NpQYjymApurLkCc";
+        api_key = "<GOOGLE_API_KEY>";
         zoom_factor = 14;
         map_url = "https://www.google.com/maps/embed/v1/place?q=" + lat + "," + lon + "&zoom=" + zoom_factor + "&key=" + api_key;
         return $sce.trustAsResourceUrl(map_url);
