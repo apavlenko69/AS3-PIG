@@ -89,6 +89,7 @@ def copy_to_s3(url, bucket):
         "html": "text/html; charset=utf-8",
         "css": "text/css",
         "js": "application/javascript",
+        "json": "application/json",
         "png": "image/png",
         "jpg": "image/jpeg",
         "txt": "text/plain",
