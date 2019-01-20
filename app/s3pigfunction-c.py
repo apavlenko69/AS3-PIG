@@ -7,6 +7,8 @@ import boto3
 import json
 import datetime
 import exifread as exif
+import piexif
+from PIL import Image
 import simplejson
 import urllib.parse
 
@@ -15,10 +17,7 @@ AWS_REGION = ''  # Specific value to be assigned in Lambda handler from Event pa
 JSON_CONFIG_FILE = 'pigconfig.json'  # Gallery configuration file name
 CONFIG_FILE_TEMP_PATH = '/tmp/' + JSON_CONFIG_FILE  # /tmp is the only writable in Lambda
 CONFIG_FILE_BUCKET_KEY = 'js/' + JSON_CONFIG_FILE  #
-DDB_TABLE = 'S3PigImageAttributes'  # Value MUST be the same as in SAM YAML template
-
-
-print('Loading function')
+DDB_TABLE = 'S3PigImageAttributes'  # Main part of value from SAM YAML template
 
 
 def detect_rk_labels(image, img_size, s3bucket):
@@ -71,6 +70,45 @@ def detect_rk_labels(image, img_size, s3bucket):
         pass
 
 
+def img_optimizer(image, s3bucket):
+    """
+    Optimizes JPEG file size
+
+    :param image:
+    :param s3bucket:
+    :return:
+    """
+    try:
+        s3client = boto3.client('s3', region_name=AWS_REGION)
+
+        temp_ifile = '/tmp/tmp_ifile.jpg'
+
+        with open(temp_ifile, 'wb') as data:
+            s3client.download_fileobj(s3bucket, image, data)
+
+        file_src = temp_ifile
+        file_dst = file_src.split('.')[0] + '_.' + file_src.split('.')[1]
+
+        img = Image.open(file_src)
+
+        """
+        Applying downsampling antialias algorithm without actual resize gives 30-40% lower file size. 
+        Downsize with 0.97 aspect ratio gives 50% decrease. 
+        """
+        aspect = 0.97
+        new_size = (int(float(img.size[0]) * float(aspect)), int(float(img.size[1]) * float(aspect)))
+
+        new_img = img.resize(new_size, Image.ANTIALIAS)
+        new_img.save(file_dst)
+        piexif.transplant(file_src, file_dst)
+
+        return 'SUCCESS', file_dst
+
+    except Exception as err:
+        print('Image optimization failed:', err)
+        return 'FAILED', file_src
+
+
 def fetch_exif_tags(image, s3bucket):
     """
     Function for detecting predefined, limited list of image EXIF tags.
@@ -87,16 +125,16 @@ def fetch_exif_tags(image, s3bucket):
         'Image Make',
         'Image Model',
         'Image DateTime',
-        'Image Orientation',
+        # 'Image Orientation',
         'EXIF LensModel',
         'EXIF ISOSpeedRatings',
         'EXIF ExposureTime',
         'EXIF FNumber',
         'EXIF ExposureProgram',
-        'EXIF ExposureMode'
+        # 'EXIF ExposureMode'
         'EXIF FocalLength',
-        'EXIF ExifImageWidth',
-        'EXIF ExifImageLength',
+        # 'EXIF ExifImageWidth',
+        # 'EXIF ExifImageLength',
         'GPS GPSAltitude',
         'GPS GPSLatitude',
         'GPS GPSLatitudeRef',
@@ -105,10 +143,12 @@ def fetch_exif_tags(image, s3bucket):
         ]
 
     try:
-        with open('/tmp/tmpimage.jpg', 'wb') as data:
+        temp_file = '/tmp/tmpimage.jpg'
+
+        with open(temp_file, 'wb') as data:
             s3client.download_fileobj(s3bucket, image, data)
 
-        tf = open('/tmp/tmpimage.jpg', 'rb')
+        tf = open(temp_file, 'rb')
         exif_tags = exif.process_file(tf, details=False)
 
         exifs_dict = {}
@@ -160,7 +200,7 @@ def is_key_exists(client, bucket, key):
             return False
 
 
-def update_pig_config_ddb(image, s3bucket, lbls, etags):
+def update_pig_config_ddb(image, s3bucket, lbls=[], etags={}, ok='Yes', _json=True):
     """
     Updates image attributes to gallery JSON config handled through DynamoDB
 
@@ -168,13 +208,17 @@ def update_pig_config_ddb(image, s3bucket, lbls, etags):
     :param s3bucket: name of the bucket
     :param lbls: list of detected Rekognition labels
     :param etags: dict of fetched EXIF tags
+    :param ok: flag from "OptimizedSizeKey" DB item
+    :param _json: flag to define if JSON config file should be updated as well
 
     :return: None. Updated config file, log entries
     """
 
     try:
         s3_client = boto3.client('s3', region_name=AWS_REGION)
-        ddb_table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(DDB_TABLE)
+
+        full_table_name = DDB_TABLE + '_' + s3bucket  # Allows multiple deployments under single AWS account
+        ddb_table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(full_table_name)
 
         if ddb_table.table_status == 'ACTIVE':  # DynamoDB table exists and ready
 
@@ -186,16 +230,19 @@ def update_pig_config_ddb(image, s3bucket, lbls, etags):
 
             img_attributes['RkLabels'] = lbls
             img_attributes['EXIF_Tags'] = etags
+            img_attributes['OptimizedSizeKey'] = ok
 
             ddb_table.put_item(Item=img_attributes)
-            ddb_reply = ddb_table.scan(Select="ALL_ATTRIBUTES")  # Full DB scan to pull updated data
-            list_of_photos = [i for i in ddb_reply['Items']]
 
-            with open(CONFIG_FILE_TEMP_PATH, 'w') as jfw:  # Updates gallery config json in Lambda /tmp
-                simplejson.dump(list_of_photos, jfw, indent=4)
+            if json:
+                ddb_reply = ddb_table.scan(Select="ALL_ATTRIBUTES")  # Full DB scan to pull updated data
+                list_of_photos = [i for i in ddb_reply['Items']]
 
-            with open(CONFIG_FILE_TEMP_PATH, 'rb') as content:  # Upload updated config back to S3 bucket
-                s3_client.upload_fileobj(content, s3bucket, CONFIG_FILE_BUCKET_KEY)
+                with open(CONFIG_FILE_TEMP_PATH, 'w') as jfw:  # Updates gallery config json in Lambda /tmp
+                    simplejson.dump(list_of_photos, jfw)
+
+                with open(CONFIG_FILE_TEMP_PATH, 'rb') as content:  # Upload updated config back to S3 bucket
+                    s3_client.upload_fileobj(content, s3bucket, CONFIG_FILE_BUCKET_KEY)
 
         else:
             print("Error: DynamoDB table resource was not available")
@@ -225,9 +272,30 @@ def lambda_handler(event, context):
         print("\nDealing with <- {} -> image from album [- {} -]".format(str(s3objkey).split('/')[-1],
                                                                          str(s3objkey).split('/')[-2]))
 
-        lbls = detect_rk_labels(s3objkey, s3objsize, bucket)
-        exiftags = fetch_exif_tags(s3objkey, bucket)
-        update_pig_config_ddb(s3objkey, bucket, lbls, exiftags)
+        full_table_name = DDB_TABLE + '_' + bucket
+        ddb_table = boto3.resource('dynamodb', region_name=AWS_REGION).Table(full_table_name)
+
+        resp = ddb_table.get_item(Key={'FileName': s3objkey})
+        okey = resp.get('Item', {'OptimizedSizeKey': 'None'}).get('OptimizedSizeKey', 'No')
+
+        if okey == 'Yes':  # In DB file marked as optimized
+
+            lbls = detect_rk_labels(s3objkey, s3objsize, bucket)
+            exiftags = fetch_exif_tags(s3objkey, bucket)
+            update_pig_config_ddb(s3objkey, bucket, lbls, exiftags, okey)
+
+        elif okey == 'No' or okey == 'None':  # file size is not optimized according to DB record
+
+            _, optimized_img_path = img_optimizer(s3objkey, bucket)
+            update_pig_config_ddb(s3objkey, bucket, ok='Yes', _json=False)
+
+            # Now we can PUT optimized file from /tmp to bucket
+            s3client = boto3.client('s3', region_name=AWS_REGION)
+            with open(optimized_img_path, 'rb') as content:  # Upload optimized image to S3
+                s3client.upload_fileobj(content, bucket, s3objkey)
+
+            print("Image {} size was optimized and uploaded to bucket as {}".format(
+                str(s3objkey).split('/')[-1], s3objkey))
 
         print("\nTime remaining (MS): {}\n".format(context.get_remaining_time_in_millis()))
 
