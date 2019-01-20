@@ -1,3 +1,5 @@
 exifread
 simplejson
 cfnresponse
+piexif
+Pillow
