@@ -85,7 +85,7 @@ s3pigrid.controller('S3PIGalleryConfig', function($scope, $rootScope, $http, $sc
       };
 
       // Gallery parameters
-      $scope.myBucketURL = "http://<BUCKET-NAME>.s3-website-<AWS-REGION>/js/pigconfig.json";
+      $scope.myBucketURL = "http://<BUCKET-NAME>.s3-website-<AWS-REGION>.amazonaws.com";
       //$scope.myBucketURL = $location.protocol() + '://' + $location.host();
       $scope.sresult = 0;   // Initial value for number of found photos
       $scope.cpage = 1;     // Default for current page #
