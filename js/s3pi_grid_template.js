@@ -10,7 +10,8 @@ var s3pigrid = angular.module('s3PIGrid',['ngSanitize']);
 
 // Gallery logic: fetching data from JSON
 s3pigrid.controller('S3PIGalleryConfig', function($scope, $rootScope, $http, $sce) {
-    $http.get('https://s3-<AWS-REGION>.amazonaws.com/<BUCKET-NAME>/js/pigconfig.json')
+    //$http.get('https://s3-<AWS-REGION>.amazonaws.com/<BUCKET-NAME>/js/pigconfig.json')
+    $http.get('http://<BUCKET-NAME>.s3-website-<AWS-REGION>/js/pigconfig.json')
       .then(function onSuccess(response) {
         $scope.imagesData = response.data; // Object with whole gallery data
         $scope.totalp = response.data.length;  // Total number of photos in album
@@ -84,7 +85,7 @@ s3pigrid.controller('S3PIGalleryConfig', function($scope, $rootScope, $http, $sc
       };
 
       // Gallery parameters
-      $scope.myBucketURL = "https://s3-<AWS-REGION>.amazonaws.com/<BUCKET-NAME>/";
+      $scope.myBucketURL = "http://<BUCKET-NAME>.s3-website-<AWS-REGION>/js/pigconfig.json";
       //$scope.myBucketURL = $location.protocol() + '://' + $location.host();
       $scope.sresult = 0;   // Initial value for number of found photos
       $scope.cpage = 1;     // Default for current page #
