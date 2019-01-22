@@ -11,7 +11,7 @@ To use service, it is enough just to upload images into AWS S3 bucket, configure
 Deployment of AS3-PIG service can be done with building AWS CludFormation stack with YAML template from this repository. During deployment all service components, including S3 bucket with web hosting, Lambda functions, DynamoDB table will be created. Also static files will be copied from git and customized for use with specific bucket and selected region. To start using gallery upload images into img/ folder of new bucket. Deployment tested with no issues for eu-west-1 (Ireland), us-east-1 (US East (N. Virginia)) and ap-northeast-1 (Tokyo).
 ### Procedure
 If you have SAM CLI installed below script, populated with your vaiables, can be used for deployment from command line.
-
+```
 #!/bin/bash
 PROJECT_PATH=~/AS3-PIG/app/
 SAM_TEMPLATE=s3pig-template.yaml
@@ -45,7 +45,7 @@ sam deploy \
     --stack-name ${STACK_NAME} \
     --capabilities CAPABILITY_IAM \
     --region ${AWS_REGION}
-
+```
 
 ## Demo
 http://as3-pig.s3-website-eu-west-1.amazonaws.com
