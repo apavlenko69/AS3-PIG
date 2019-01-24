@@ -19,6 +19,16 @@ CONFIG_FILE_TEMP_PATH = '/tmp/' + JSON_CONFIG_FILE  # /tmp is the only writable 
 CONFIG_FILE_BUCKET_KEY = 'js/' + JSON_CONFIG_FILE  #
 DDB_TABLE = 'S3PigImageAttributes'  # Main part of value from SAM YAML template
 
+metadata = {
+    "html": "text/html; charset=utf-8",
+    "css": "text/css",
+    "js": "application/javascript",
+    "json": "application/json",
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "txt": "text/plain",
+}
+
 
 def detect_rk_labels(image, img_size, s3bucket):
     """
@@ -74,9 +84,9 @@ def img_optimizer(image, s3bucket):
     """
     Optimizes JPEG file size
 
-    :param image:
-    :param s3bucket:
-    :return:
+    :param image: image S3 object key
+    :param s3bucket: S3 bucket
+    :return: tuple of status and optimized file name in Lambda instance
     """
     try:
         s3client = boto3.client('s3', region_name=AWS_REGION)
@@ -93,7 +103,7 @@ def img_optimizer(image, s3bucket):
 
         """
         Applying downsampling antialias algorithm without actual resize gives 30-40% lower file size. 
-        Downsize with 0.97 aspect ratio gives 50% decrease. 
+        Downsize with 0.97 aspect ratio gives up to 50% decrease. 
         """
         aspect = 0.97
         new_size = (int(float(img.size[0]) * float(aspect)), int(float(img.size[1]) * float(aspect)))
@@ -209,7 +219,7 @@ def update_pig_config_ddb(image, s3bucket, lbls=[], etags={}, ok='Yes', _json=Tr
     :param lbls: list of detected Rekognition labels
     :param etags: dict of fetched EXIF tags
     :param ok: flag from "OptimizedSizeKey" DB item
-    :param _json: flag to define if JSON config file should be updated as well
+    :param _json: flag to define if JSON config file should be updated
 
     :return: None. Updated config file, log entries
     """
@@ -242,7 +252,10 @@ def update_pig_config_ddb(image, s3bucket, lbls=[], etags={}, ok='Yes', _json=Tr
                     simplejson.dump(list_of_photos, jfw)
 
                 with open(CONFIG_FILE_TEMP_PATH, 'rb') as content:  # Upload updated config back to S3 bucket
-                    s3_client.upload_fileobj(content, s3bucket, CONFIG_FILE_BUCKET_KEY)
+                    s3_client.upload_fileobj(content,
+                                             s3bucket,
+                                             CONFIG_FILE_BUCKET_KEY,
+                                             ExtraArgs={'ContentType': 'application/json'})
 
         else:
             print("Error: DynamoDB table resource was not available")
@@ -291,8 +304,15 @@ def lambda_handler(event, context):
 
             # Now we can PUT optimized file from /tmp to bucket
             s3client = boto3.client('s3', region_name=AWS_REGION)
-            with open(optimized_img_path, 'rb') as content:  # Upload optimized image to S3
-                s3client.upload_fileobj(content, bucket, s3objkey)
+            with open(optimized_img_path, 'rb') as content:  # Upload optimized image to S3 (invokes another Lambda)
+
+                ext = s3objkey.split('/')[-1].split('.')[-1]
+                for e, m in metadata.items():
+                    if e == ext:
+                        s3client.upload_fileobj(content,
+                                                bucket,
+                                                s3objkey,
+                                                ExtraArgs={'ContentType': m})
 
             print("Image {} size was optimized and uploaded to bucket as {}".format(
                 str(s3objkey).split('/')[-1], s3objkey))
