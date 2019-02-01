@@ -63,6 +63,7 @@
     <div class="" style="padding:0 0 3px 48px">
           <div ng-show="showoptions" class="w3-animate-opacity">
 
+          <!--
           <div class="w3-border" style="padding:2px; margin:2px 2px 2px 0; width:99%">
             <span class="w3-tag w3-round w3-blue-grey w3-border w3-white-border">
               Filters
@@ -75,20 +76,7 @@
             ng-init="spattern=''" ng-model="spattern.EXIF_Tags.$"
             placeholder="Date of shooting...">
           </div>
-
-          <div class="w3-border" style="padding:2px; margin:2px 2px 2px 0; width:99%">
-            <span class="w3-large">
-              <a href="#" ng-click="gstepchange(0)"><i class="fa fa-minus-square-o"></i></a>
-            </span>
-            <input style="margin-top: 3px; margin-bottom: 3px" type="range" min="1" max="{{gstepMax}}"
-             ng-model="gstep">
-             <span class="w3-large">
-               <a href="#" ng-click="gstepchange(1)"><i class="fa fa-plus-square-o"></i></a>
-             </span>
-             <br>
-             <input style="margin-top: 3px; margin-bottom: 3px" size="2" value="{{gstep}}" readonly>
-              <span class="w3-tag w3-round w3-blue-grey w3-border w3-white-border">photo(s) per page</span>
-          </div>
+          -->
 
           <!-- Sort order toggle v2 -->
           <div class="w3-container w3-border" style="padding:2px; margin:2px 2px 2px 0; width:99%">
@@ -109,6 +97,20 @@
               <i ng-show="rvrs" class="fa fa-sort-amount-asc"></i>
             </div>
           </div>
+          </div>
+
+          <div class="w3-border" style="padding:2px; margin:2px 2px 2px 0; width:99%">
+            <span class="w3-large">
+              <a href="#" ng-click="gstepchange(0)"><i class="fa fa-minus-square-o"></i></a>
+            </span>
+            <input style="margin-top: 3px; margin-bottom: 3px" type="range" min="1" max="{{gstepMax}}"
+             ng-model="gstep">
+             <span class="w3-large">
+               <a href="#" ng-click="gstepchange(1)"><i class="fa fa-plus-square-o"></i></a>
+             </span>
+             <br>
+             <input style="margin-top: 3px; margin-bottom: 3px" size="2" value="{{gstep}}" readonly>
+              <span class="w3-tag w3-round w3-blue-grey w3-border w3-white-border">photo(s) per page</span>
           </div>
 
         </div>
