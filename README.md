@@ -1,16 +1,17 @@
 # AS3-PIG
-The name is an acronym made from Amazon S3 Photo Index Gallery.
+The project name is an acronym made from Amazon S3 Photo Index Gallery. 
 
 ## Project goal
-To build searchable photo gallery for images stored in the AWS S3 bucket. Images labeling is automated by AS3-PIG service. With images labeled by the service, and access provided with S3 web hosting, photographs can be found in on-line gallery using any of the following parameters: pre-selected EXIF tags, detected objects, file name or name of the containing folder, considered as an album. 
+To build searchable photo gallery for images stored in AWS S3 bucket. Images labeling is automated by AS3-PIG service. With images labeled by the service, and access provided with S3 web hosting, photographs can be found in on-line gallery using any of the following parameters: pre-selected EXIF tags, detected objects, file name or name of the containing folder, considered as an album. 
 
 ## Approach
 To use service, it is enough just to upload images into AWS S3 bucket, configured for use with the gallery. This can be done using any of available options for files upload: S3 Management web console, aws cli or any third party software capable to work with S3 bucket. Any changes within bucket - uploading, removing, renaming images will be processed by the service, thus maintaining updated and consistent gallery configuration. AS3-PIG own front-end is a single page application (SPA), which can be replaced with other available SPA options, capable to work with JSON gallery config (out of service scope).
 
 ## Installation
-Deployment of AS3-PIG service can be done with building AWS CludFormation stack and use YAML template from this repository - s3pig-template.yaml. During deployment all service components, including S3 bucket with web hosting, Lambda functions, DynamoDB table will be created. Also static files will be copied from git and customized for use with specific bucket and selected region. To start using gallery upload images into img/ folder of new bucket. Deployment tested with no issues for eu-west-1 (Ireland), us-east-1 (US East (N. Virginia)) and ap-northeast-1 (Tokyo).
+Deployment of AS3-PIG service is a standard building of AWS CludFormation stack with help of YAML template from this repository - s3pig-template.yaml. During deployment all service components, including S3 bucket with web hosting, Lambda functions, DynamoDB table and rest will be created. Also static files will be copied from git and customized for use with defined during installation, specific bucket and selected AWS region. To start using gallery upload images into img/ folder of the new bucket. Deployment tested with no issues detected for eu-west-1 (Ireland), us-east-1 (US East (N. Virginia)) and ap-northeast-1 (Tokyo).
+
 ### Procedure
-Option 1. On AWS Cloud Formation management console page follow procedure for new stack creation using YAML template from repository.
+Option 1. On AWS Cloud Formation management console page follow procedure for new stack creation using [YAML template from repository]: (app/s3pig-template.yaml).
 
 Option 2. Having SAM CLI installed, below script, populated with your vaiables, can be used for deployment from command line. 
 ```
