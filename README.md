@@ -11,7 +11,7 @@ To use service, it is enough just to upload images into AWS S3 bucket, configure
 Deployment of AS3-PIG service is a standard building of AWS CludFormation stack with help of YAML template from this repository - s3pig-template.yaml. During deployment all service components, including S3 bucket with web hosting, Lambda functions, DynamoDB table and rest will be created. Also static files will be copied from git and customized for use with defined during installation, specific bucket and selected AWS region. To start using gallery upload images into img/ folder of the new bucket. Deployment tested with no issues detected for eu-west-1 (Ireland), us-east-1 (US East (N. Virginia)) and ap-northeast-1 (Tokyo).
 
 ### Procedure
-Option 1. On AWS Cloud Formation management console page follow procedure for new stack creation using [YAML template from repository]: (app/s3pig-template.yaml).
+Option 1. On AWS Cloud Formation management console page follow procedure for new stack creation using [YAML template from repository](app/s3pig-template.yaml).
 
 Option 2. Having SAM CLI installed, below script, populated with your vaiables, can be used for deployment from command line. 
 ```
